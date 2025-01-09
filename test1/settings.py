@@ -3,8 +3,9 @@ import os
 import json
 from firebase_admin import credentials, initialize_app
 import dj_database_url
+import logging
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
+# Build paths inside the project
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Secret Key
@@ -16,7 +17,7 @@ if not SECRET_KEY:
 DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 # Allowed Hosts
-ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,musi1.onrender.com").split(",")
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 
 # Application definition
 INSTALLED_APPS = [
@@ -32,7 +33,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',  # Whitenoise for static files
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # For static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -95,8 +96,8 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
-# Security Settings
-if not DEBUG:  # Apply only in production
+# Security Settings for Production
+if not DEBUG:
     SECURE_SSL_REDIRECT = True
     SECURE_HSTS_SECONDS = 31536000  # 1 year
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
@@ -136,27 +137,32 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 
 # Firebase Settings
+SERVICE_ACCOUNT_PATH = "/etc/secrets/service_account"  # Ensure this file exists in your environment
 
-
-# Path to the plain text secret file
-SERVICE_ACCOUNT_PATH = "/etc/secrets/service_account"  # Plain text file in Render
+FIREBASE_DATABASE_URL = os.environ.get(
+    "FIREBASE_DATABASE_URL",
+    "https://musify-2ad60-default-rtdb.asia-southeast1.firebasedatabase.app"
+)
 
 if os.path.exists(SERVICE_ACCOUNT_PATH):
     try:
-        # Read the plain text file
+        # Read and parse the Firebase service account file
         with open(SERVICE_ACCOUNT_PATH, 'r') as f:
             service_account_json = f.read()
 
-        # Parse the JSON content from plain text
         service_account_dict = json.loads(service_account_json)
-
-        # Initialize Firebase Admin SDK with parsed JSON
         cred = credentials.Certificate(service_account_dict)
+
+        # Initialize Firebase Admin SDK
         initialize_app(cred, {
-            'databaseURL': 'https://musify-2ad60-default-rtdb.asia-southeast1.firebasedatabase.app'
+            'databaseURL': FIREBASE_DATABASE_URL
         })
+
+        # Log successful initialization
+        logging.getLogger(__name__).info("Firebase initialized successfully.")
+    except json.JSONDecodeError:
+        raise ValueError("Invalid JSON format in the service account file.")
     except Exception as e:
         raise Exception(f"Error initializing Firebase Admin SDK: {e}")
 else:
     raise FileNotFoundError(f"Service account file not found at: {SERVICE_ACCOUNT_PATH}")
-
