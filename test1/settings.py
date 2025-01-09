@@ -6,12 +6,12 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Secret Key
-SECRET_KEY = os.environ.get("SECRET_KEY", "your-default-secret-key")
+SECRET_KEY = os.environ.get("SECRET_KEY")
 if not SECRET_KEY:
     raise ValueError("SECRET_KEY environment variable is not set.")
 
 # Debug Mode
-DEBUG = os.environ.get("DEBUG", "True").lower() == "true"
+DEBUG = os.environ.get("DEBUG", "False").lower() == "true"
 
 # Allowed Hosts
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "localhost,127.0.0.1,musi1.onrender.com").split(",")
@@ -87,7 +87,9 @@ USE_TZ = True
 
 # Static and Media Files
 STATIC_URL = '/static/'
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # Used in production
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')  # For production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -103,9 +105,7 @@ if not DEBUG:  # Apply only in production
     SECURE_CONTENT_TYPE_NOSNIFF = True
 
 # CSRF Trusted Origins
-CSRF_TRUSTED_ORIGINS = [
-    'http://localhost:8000',  # Add other URLs as needed
-]
+CSRF_TRUSTED_ORIGINS = os.environ.get("CSRF_TRUSTED_ORIGINS", "http://localhost:8000").split(",")
 
 # Logging
 LOGGING = {
@@ -132,3 +132,16 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Login URL
 LOGIN_URL = '/login/'
+
+# Firebase Settings
+SERVICE_ACCOUNT_PATH = "/etc/secrets/service_account.json"  # Adjusted for Render secrets
+
+if os.path.exists(SERVICE_ACCOUNT_PATH):
+    from firebase_admin import credentials, initialize_app
+
+    cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
+    initialize_app(cred, {
+        'databaseURL': 'https://musify-2ad60-default-rtdb.asia-southeast1.firebasedatabase.app'
+    })
+else:
+    raise FileNotFoundError(f"Service account file not found at: {SERVICE_ACCOUNT_PATH}")
