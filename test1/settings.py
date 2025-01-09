@@ -1,5 +1,7 @@
 from pathlib import Path
 import os
+import json
+from firebase_admin import credentials, initialize_app
 import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -134,14 +136,27 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/login/'
 
 # Firebase Settings
-SERVICE_ACCOUNT_PATH = "/etc/secrets/service_account.json"  # Adjusted for Render secrets
+
+
+# Path to the plain text secret file
+SERVICE_ACCOUNT_PATH = "/etc/secrets/service_account"  # Plain text file in Render
 
 if os.path.exists(SERVICE_ACCOUNT_PATH):
-    from firebase_admin import credentials, initialize_app
+    try:
+        # Read the plain text file
+        with open(SERVICE_ACCOUNT_PATH, 'r') as f:
+            service_account_json = f.read()
 
-    cred = credentials.Certificate(SERVICE_ACCOUNT_PATH)
-    initialize_app(cred, {
-        'databaseURL': 'https://musify-2ad60-default-rtdb.asia-southeast1.firebasedatabase.app'
-    })
+        # Parse the JSON content from plain text
+        service_account_dict = json.loads(service_account_json)
+
+        # Initialize Firebase Admin SDK with parsed JSON
+        cred = credentials.Certificate(service_account_dict)
+        initialize_app(cred, {
+            'databaseURL': 'https://musify-2ad60-default-rtdb.asia-southeast1.firebasedatabase.app'
+        })
+    except Exception as e:
+        raise Exception(f"Error initializing Firebase Admin SDK: {e}")
 else:
     raise FileNotFoundError(f"Service account file not found at: {SERVICE_ACCOUNT_PATH}")
+
